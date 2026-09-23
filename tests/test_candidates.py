@@ -49,12 +49,25 @@ def test_no_obvious_label_is_retained_not_dropped(records, tmp_path):
     assert len(results) == 1, "product with no label must stay in the output"
 
 
-def test_detector_rejects_invented_resolution(records, tmp_path):
+def test_detector_sanitizes_and_flags_invented_resolution(records, tmp_path):
+    """An untraceable value is rejected (reset to UNKNOWN) and flagged — the
+    run continues rather than crashing."""
     rich = next(r for r in records if r["product_id"] != "sparse-0000")
-    invented = [dict(TWO_OPPS[0], spatial_resolution="30m")]  # input marked UNKNOWN
-    from casei_geofm.schemas.llm_io import InventedMetadataError
-    with pytest.raises(InventedMetadataError):
-        label_detector.detect(rich, api=fake_detector_api(invented), cache_dir=tmp_path)
+    invented = [dict(TWO_OPPS[0], spatial_resolution="123456.789m")]  # nowhere in input
+    result = label_detector.detect(rich, api=fake_detector_api(invented), cache_dir=tmp_path)
+    assert result["opportunities"][0]["spatial_resolution"] == "UNKNOWN"
+    assert result["guardrail_flags"] and "invented" in result["guardrail_flags"][0]
+
+
+def test_detector_keeps_instrument_traceable_resolution(records, tmp_path):
+    """A value copied from instrument metadata inside the payload is kept."""
+    rich = next(r for r in records if r["instruments"]
+                and r["instruments"][0]["spatial_resolution"] != "UNKNOWN")
+    inst_res = rich["instruments"][0]["spatial_resolution"]
+    traced = [dict(TWO_OPPS[0], spatial_resolution=inst_res)]
+    result = label_detector.detect(rich, api=fake_detector_api(traced), cache_dir=tmp_path)
+    assert result["opportunities"][0]["spatial_resolution"] == inst_res
+    assert result["guardrail_flags"] == []
 
 
 def test_empty_examples_config_still_runs(records, tmp_path, monkeypatch):

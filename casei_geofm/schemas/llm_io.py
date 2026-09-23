@@ -1,5 +1,7 @@
 """Per-stage LLM I/O schemas and the invented-metadata guardrail."""
 
+import re
+
 from pydantic import BaseModel
 
 from casei_geofm.schemas.candidate import Provenance, Rating
@@ -11,19 +13,34 @@ class InventedMetadataError(ValueError):
     """LLM supplied a value for a field the input marked UNKNOWN."""
 
 
+def _traceable(value: str, input_text: str) -> bool:
+    """A value is traceable when it appears verbatim in the input, or when
+    every number in it does (e.g. copied from nested instrument metadata)."""
+    if value in input_text:
+        return True
+    numbers = re.findall(r"\d+(?:\.\d+)?", value)
+    return bool(numbers) and all(n in input_text for n in numbers)
+
+
 def reject_unknown_overrides(input_record: dict, response: dict,
-                             protected_fields: list[str]) -> None:
+                             protected_fields: list[str],
+                             input_text: str = "") -> None:
     """Raise if the response fills in a protected metadata field the input
-    marked UNKNOWN. Protected fields are factual metadata (resolutions, dates,
-    formats, geometry) the LLM must never invent — as opposed to the semantic
-    judgments (ratings, tasks, reasoning) it is asked to produce."""
+    marked UNKNOWN — unless the value is traceable to somewhere else in the
+    input (pass the full serialized payload as `input_text`). Protected fields
+    are factual metadata (resolutions, dates, formats, geometry) the LLM must
+    never invent — as opposed to the semantic judgments (ratings, tasks,
+    reasoning) it is asked to produce."""
     for field in protected_fields:
         if input_record.get(field, UNKNOWN) == UNKNOWN:
             value = response.get(field)
-            if value not in (None, "", UNKNOWN):
-                raise InventedMetadataError(
-                    f"LLM invented '{field}'={value!r} but input marked it UNKNOWN"
-                )
+            if value in (None, "", UNKNOWN):
+                continue
+            if input_text and _traceable(str(value), input_text):
+                continue
+            raise InventedMetadataError(
+                f"LLM invented '{field}'={value!r} but input marked it UNKNOWN"
+            )
 
 
 # ---- Stage 1: label opportunity detection ----

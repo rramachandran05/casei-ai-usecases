@@ -55,14 +55,32 @@ def detect(record: dict, api=None, cache_dir: Path | None = None) -> dict:
     resp: LabelDetectorResponse = call_stage(
         "label_detector", record["product_id"], payload, LabelDetectorResponse, **kwargs)
 
-    from casei_geofm.schemas.llm_io import reject_unknown_overrides
+    from casei_geofm.schemas.llm_io import (
+        InventedMetadataError, _traceable, reject_unknown_overrides,
+    )
+    input_text = json.dumps(payload["product"], default=str)
+    opportunities = []
+    flags = []
     for opp in resp.opportunities:
-        reject_unknown_overrides(payload["product"], opp.model_dump(), PROTECTED_FIELDS)
+        dumped = opp.model_dump()
+        try:
+            reject_unknown_overrides(payload["product"], dumped, PROTECTED_FIELDS,
+                                     input_text=input_text)
+        except InventedMetadataError as e:
+            # reject the untraceable value but keep the opportunity: reset the
+            # field to UNKNOWN and flag it for review
+            for field in PROTECTED_FIELDS:
+                if dumped.get(field) not in (None, "", "UNKNOWN") and \
+                        not _traceable(str(dumped[field]), input_text):
+                    dumped[field] = "UNKNOWN"
+            flags.append(str(e))
+        opportunities.append(dumped)
 
     return {
         "product_id": record["product_id"],
-        "opportunities": [o.model_dump() for o in resp.opportunities],
+        "opportunities": opportunities,
         "reasoning": resp.reasoning,
+        "guardrail_flags": flags,
     }
 
 

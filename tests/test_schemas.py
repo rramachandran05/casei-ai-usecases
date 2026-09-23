@@ -65,3 +65,24 @@ def test_reject_unknown_overrides_accepts_honest_response():
         {"spatial_resolution": "UNKNOWN", "temporal_resolution": "daily"},
         protected_fields=["spatial_resolution", "temporal_resolution"],
     )
+
+
+def test_reject_unknown_overrides_allows_input_traceable_values():
+    """Real case from the pilot slice: product-level resolution is UNKNOWN but
+    the instrument metadata in the same payload carries the value — copying it
+    up is evidence use, not invention."""
+    input_record = {"spatial_resolution": "UNKNOWN"}
+    input_text = ('{"instruments": [{"name": "LMA", '
+                  '"spatial_resolution": "6-12 m (horizontal), 20-30 m (vertical)"}]}')
+    reject_unknown_overrides(
+        input_record,
+        {"spatial_resolution": "6-12 m (horizontal), 20-30 m (vertical)"},
+        protected_fields=["spatial_resolution"],
+        input_text=input_text,
+    )  # no raise
+    # but a value whose numbers appear nowhere in the input still trips
+    import pytest as _pytest
+    with _pytest.raises(InventedMetadataError):
+        reject_unknown_overrides(
+            input_record, {"spatial_resolution": "500 m"},
+            protected_fields=["spatial_resolution"], input_text=input_text)
