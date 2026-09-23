@@ -1,6 +1,12 @@
 """Stage 3 — EO-observability (science fit) against the model card.
-LOW candidates are flagged for future models, never filtered."""
+LOW candidates are flagged for future models, never filtered.
 
+Science fit depends on (product, target, phenomenon) — not on the proposed
+task — so it is assessed once per pair and broadcast to every candidate
+sharing it (the pilot slice showed ~7 tasks per opportunity; without this the
+full catalog would need ~7x the calls)."""
+
+import hashlib
 import json
 from pathlib import Path
 
@@ -25,16 +31,18 @@ def assess(candidate: Candidate, card: ModelCard, api=None,
         "candidate": {
             "target_variable": candidate.label.target_variable,
             "label_type": candidate.label.label_type,
-            "proposed_task": candidate.use_case.proposed_task,
             "phenomenon": candidate.use_case.phenomenon,
-            "task_description": candidate.use_case.task_description,
         },
     }
+    # task-independent: one call per (product, target, phenomenon), broadcast
+    pair_key = hashlib.sha256("|".join([
+        candidate.casei.product_id, candidate.label.target_variable,
+        candidate.use_case.phenomenon]).encode()).hexdigest()[:16]
     kwargs = {"cache_dir": cache_dir} if cache_dir else {}
     if api:
         kwargs["api"] = api
     resp: ScienceFitResponse = call_stage(
-        "science_mapper", candidate.candidate_id, payload, ScienceFitResponse, **kwargs)
+        "science_mapper", pair_key, payload, ScienceFitResponse, **kwargs)
     candidate.compatibility.science_fit = resp.science_fit
     candidate.evidence.reasoning += f"\nScience fit: {resp.reasoning}"
     if resp.science_fit == Rating.LOW:

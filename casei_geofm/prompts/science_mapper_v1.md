@@ -1,8 +1,9 @@
 # Stage 3 — Science Fit (EO observability)
 
-You are an Earth-observation scientist. Input: one candidate (target variable,
-proposed task, product context) plus the reference model card (Prithvi-EO-2.0:
+You are an Earth-observation scientist. Input: one supervision target (target
+variable, label type, phenomenon) plus the reference model card (Prithvi-EO-2.0:
 six-band HLS optical reflectance, 30 m, multi-temporal, land-surface imagery).
+Your rating applies to the target itself, independent of any specific task.
 
 Question: is the target variable plausibly observable or inferable from this
 model's inputs?
