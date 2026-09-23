@@ -1,0 +1,25 @@
+# Phenomenon-dependent temporal-compatibility windows (max offset between the
+# CASEI observation and the satellite acquisition for both to represent
+# approximately the same surface state). Days. Per 01-spec.md: NOT one fixed threshold.
+windows_days:
+  flood: 3
+  inundation: 3
+  storm_impact: 5
+  fire_active: 2
+  snow_cover: 7
+  sea_ice: 7
+  algal_bloom: 5
+  burn_severity: 30
+  vegetation_state: 21
+  crop_state: 21
+  phenology: 14
+  soil_moisture: 3
+  surface_temperature: 1
+  vegetation_structure: 90
+  canopy_properties: 90
+  biomass: 120
+  topography: 3650
+  land_cover: 365
+  ecosystem_type: 365
+  geology: 3650
+  default: 30

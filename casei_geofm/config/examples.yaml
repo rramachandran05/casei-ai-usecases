@@ -1,0 +1,8 @@
+# Optional example use cases. Loaded ONLY into LLM prompt context as reasoning
+# aids; never used as filters. Discovery must not be constrained to these.
+examples:
+  - flood_mapping
+  - burn_scar_mapping
+  - land_cover
+  - biomass_estimation
+  - vegetation_classification

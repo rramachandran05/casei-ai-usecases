@@ -1,0 +1,51 @@
+# Canonical vocabularies from specs/casei-geofm-discovery-pilot/01-spec.md.
+task_families:
+  - semantic_segmentation
+  - instance_segmentation
+  - object_detection
+  - pixel_regression
+  - patch_regression
+  - patch_classification
+  - multi_label_classification
+  - ordinal_classification
+  - change_detection
+  - temporal_classification
+  - temporal_regression
+  - anomaly_event_detection
+  - super_resolution
+  - downscaling
+  - image_to_image_prediction
+  - spectral_prediction
+  - cross_modal_prediction
+  - contrastive_multimodal_learning
+  - weakly_supervised_learning
+
+label_types:
+  - raster_categorical
+  - raster_continuous
+  - polygon
+  - point_observation
+  - field_plot
+  - transect
+  - object_location
+  - event
+  - airborne_imagery
+  - airborne_retrieval
+  - hyperspectral_measurement
+  - lidar
+  - radar
+  - temporal_observations
+  - before_after_observation
+  - spectral_measurements
+  - instrument_retrieval
+  - human_campaign_annotation
+  - proxy_label
+  - derived_label
+  - multimodal_pairing
+
+provenance_classes:
+  - DIRECT_LABEL
+  - DERIVED_LABEL
+  - WEAK_OR_PROXY_LABEL
+  - MULTIMODAL_PAIR
+  - NO_OBVIOUS_LABEL

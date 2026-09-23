@@ -1,0 +1,45 @@
+# Machine-readable compatibility spec for the reference model.
+# Transcribed from resources/prithvi-eo-2.0.yaml (arXiv 2412.02732v3).
+model:
+  name: Prithvi-EO-2.0
+  version: "2.0"
+  variants: [300M, 300M-TL, 600M, 600M-TL]
+
+input:
+  sensors: [HLS]
+  supported_satellites: [HLS, Sentinel-2, Landsat]
+  bands: [Blue, Green, Red, NIR, SWIR1, SWIR2]
+  band_note: the six spectral bands common to Landsat and Sentinel-2
+  spatial_resolution_m: 30
+  temporal_context:
+    timestamps: 4
+    spacing: 1-6 months
+    single_timestep_supported: true
+  input_size_px: 224
+  optional_metadata: [latitude, longitude, year, day_of_year]
+
+pretraining:
+  domain: earth_observation
+  data_type: multispectral
+  data: HLS global, 2014-2023
+  objective: masked autoencoding
+  geography: global
+
+adaptation:
+  possible_tasks:
+    - classification
+    - segmentation
+    - regression
+    - change_detection
+    - object_detection
+    - multi_temporal_analysis
+  mechanisms: [full_fine_tuning, frozen_backbone, decoder_head_replacement, PEFT]
+  toolkit: TerraTorch
+  fine_tuning_cost: single GPU feasible
+
+constraints:
+  modalities: optical/multispectral only (no SAR in pretraining)
+  band_set: fixed six-band HLS reflectance interface (adapters needed otherwise)
+  cloud_sensitivity: pretraining filtered to <20% cloudy pixels
+  native_resolution_m: 30
+  resolution_transfer_range: 0.1m-15m tasks demonstrated
