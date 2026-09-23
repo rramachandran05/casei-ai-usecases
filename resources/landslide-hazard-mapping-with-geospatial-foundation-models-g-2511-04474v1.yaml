@@ -1,0 +1,206 @@
+case: landslide_hazard_mapping_band_and_label_adaptability
+science_problem:
+  phenomenon: landslides
+  task: semantic_segmentation
+  motivation: landslide mapping must work across sensors, regions and under label
+    scarcity; the paper frames a three-axis framework of sensor, label and domain
+    adaptation
+input:
+  primary_dataset: Landslide4Sense
+  transfer_datasets:
+  - Landslide Reference (Orynbaikyzy et al. 2025)
+  - GVLM-S2
+  sensor: Sentinel-2 (plus ALOS PALSAR topography layers in the full 14-band config)
+  band_configurations:
+    full_14B: all Landslide4Sense channels
+    nine_band_9B: HLS baseline + B5, B6, B7
+    hls_like_6B: B2, B3, B4, B8, B11, B12 (B8 replaces HLS B8A) — matches pretraining
+      interface
+    four_band_4B: reduced configuration
+  temporal_context: single
+  spatial_resolution: unknown
+labels:
+  type: pixel_mask
+  source: Landslide4Sense annotated landslide inventory
+  amount: full dataset, ablated to 10%, 2.5% and 1.25% (~50 samples at 1.25%)
+  class_balance: severe imbalance — landslide pixels are a small fraction of terrain
+    compared to stable ground
+foundation_model:
+  model: Prithvi-EO-2.0
+  sizes_tested:
+  - 300M
+  - 600M
+  pretrained_domain_match: high for the 6-band HLS-like configuration (matches the
+    pretraining band interface exactly, requiring no adapter); partial for 14B/9B/4B
+adaptation:
+  backbone:
+    frozen: both frozen and full fine-tuning tested
+    fine_tuning: full and frozen compared head-to-head
+  decoder: band adapter head — either a U-Net adapter or a linear projection; the
+    6-band configuration matches the pretraining interface and needs no adapter
+  initialization: pretrained
+  loss:
+  - weighted cross-entropy (wCE)
+  - Lovasz
+  - focal
+  - BCE + Dice
+  rationale:
+  - 'Observation: input band sets differ from the pretrained six-band interface. Implication:
+    bands must be reconciled before the pretrained patch embedding. Decision: insert
+    a lightweight nonlinear (U-Net) adapter rather than a linear projection.'
+  - 'Observation: labels are scarce and compute is limited. Implication: full fine-tuning
+    risks overfitting and cost. Decision: a frozen encoder preserves much of the benefit.'
+adaptation_levels:
+- 2
+- 5
+- 7
+adaptation_levels_note:
+  compared_head_to_head: true
+  detail: frozen vs full tuning across band configs, with U-Net and linear adapter
+    necks
+training:
+  learning_rate: 1.0e-05
+  batch_size: 8
+  epochs: 100
+  optimizer: Adam (weight decay 0)
+  early_stopping: none
+  note: optimization kept uniform across all models and losses for fair comparison
+evaluation:
+  metrics:
+  - mIoU
+  - F1
+  - precision
+  - recall
+  - mAcc
+  protocol: global confusion matrix, best validation-loss checkpoint per model/loss;
+    single seed per setting in the label-fraction study
+  data_split:
+    spatial_holdout: standard Landslide4Sense train/validation/test split
+    cross_dataset: transfer to Landslide Reference and GVLM-S2
+results:
+  baselines_100pct_6band:
+    U-Net:
+      mIoU: 70.44
+      F1: 59.66
+      precision: 56.17
+      recall: 63.63
+    U-Net++:
+      mIoU: 68.96
+      F1: 57.89
+    SegFormer:
+      mIoU: 69.89
+      F1: 59.12
+      precision: 49.51
+      recall: 73.37
+    SwinV2-B:
+      mIoU: 67.77
+      F1: 58.28
+      precision: 47.09
+      recall: 76.43
+    TransLandSeg:
+      mIoU: 68.3
+      F1: 55.39
+      note: RGB-only due to SAM backbone
+    SatMAE:
+      mIoU: 67.48
+      F1: 53.72
+    TerraMind_base:
+      mIoU: 69.77
+      F1: 58.12
+  prithvi:
+    300M_6B_full:
+      mIoU: 71.3
+      F1: 60.7
+    600M_6B_wCE:
+      mIoU: 70.41
+      F1: 58.56
+    300M_14B_UNet_adapter_full:
+      mIoU: 73.62
+      F1: 65.42
+      note: best overall
+    300M_14B_UNet_adapter_frozen:
+      mIoU: 71.64
+      F1: 61.86
+    300M_14B_linear_frozen:
+      mIoU: 71.08
+      F1: 60.82
+    300M_6B_frozen:
+      mIoU: 66.21
+      F1: 51.53
+    300M_9B_UNet_frozen:
+      mIoU: 68.77
+      F1: 56.27
+    300M_9B_linear_frozen:
+      mIoU: 63.6
+      F1: 46.35
+    300M_4B_UNet_frozen:
+      mIoU: 65.66
+      F1: 50.46
+  label_scarcity_mIoU:
+    at_1.25pct:
+      Prithvi_600M: 66.96
+      Prithvi_300M: 64.45
+      U-Net: 59.7
+      U-Net++: 55.5
+    at_2.5pct:
+      Prithvi_600M: 67.06
+      Prithvi_300M: 66.55
+      U-Net++: 65.49
+      U-Net: 65.12
+    at_10pct: all models cluster near 69-70
+    at_100pct:
+      Prithvi_300M: 71.3
+      U-Net: 70.44
+      Prithvi_600M: 70.41
+  data_efficiency_score:
+    Prithvi_600M: ~0.97
+    Prithvi_300M: ~0.95
+    U-Net++: ~0.94
+    U-Net: ~0.94
+lessons:
+- EO-native pretraining pays off most under extreme label scarcity — at 1.25% labels
+  (~50 samples) Prithvi-600M led U-Net/U-Net++ by 7-12 mIoU points
+- scaling 300M to 600M improved robustness under label scarcity even though full-data
+  mIoU was comparable
+- classical CNNs catch up once >=10% of labels (~400 samples) are available; the GeoFM
+  advantage is specifically a low-label-regime advantage
+- 'a nonlinear U-Net band adapter beats a linear projection for reconciling band mismatch
+  (9B frozen: 68.77 vs 63.60 mIoU) and is parameter-efficient'
+- frozen encoders retain much of the benefit when compute or labels are limited, though
+  full tuning was best overall (73.62 mIoU with 14B + U-Net adapter)
+- more bands helped Prithvi (14B best) but hurt U-Net (14B dropped it from 70.44 to
+  61.20 mIoU) — pretrained representations exploit extra spectra better
+- Prithvi-EO-2.0 outperformed task-specific CNNs, general-purpose ViTs (SegFormer,
+  SwinV2-B) and other GeoFMs (TerraMind, SatMAE)
+failure_modes:
+- CNN and general-purpose ViT baselines over-segment (recall exceeds precision), struggling
+  to separate landslide scars from spectrally similar terrain
+- a linear band adapter distorts the precision-recall balance unpredictably — over-segmenting
+  at 9B, under-detecting at 4B (recall 23.63)
+- computational cost of GeoFMs is called out as a remaining challenge
+- limited availability of reusable AI-ready training data for landslide research
+- single-seed runs in the label-fraction study produce non-monotonic artifacts (U-Net++
+  at 10% slightly exceeded its own 100% baseline)
+bibliography:
+  title: 'Landslide Hazard Mapping with Geospatial Foundation Models: Geographical
+    Generalizability, Data Scarcity, and Band Adaptability'
+  authors:
+  - Wenwen Li
+  - Sizhe Wang
+  - Hyunho Lee
+  - Chenyan Lu
+  - Sujit Roy
+  - Rahul Ramachandran
+  - Chia-Yu Hsu
+  arxiv_id: 2511.04474v1
+  doi: 10.48550/arXiv.2511.04474
+  doi_type: arxiv-assigned; a journal DOI may also exist and is not recorded here
+  primary_category: cs.CV
+  published: '2025-11-06T15:47:37Z'
+  updated: '2025-11-06T15:47:37Z'
+  abs_url: http://arxiv.org/abs/2511.04474v1
+  pdf_url: https://arxiv.org/pdf/2511.04474v1
+review_status: draft
+provenance:
+  source: 2511.04474v1
+  extracted_by: kb_pipeline

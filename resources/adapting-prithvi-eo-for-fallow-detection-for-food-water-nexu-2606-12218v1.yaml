@@ -1,0 +1,125 @@
+case: fallow_field_detection_peft_vit_adapter
+science_problem:
+  phenomenon: fallow agricultural land (food-water nexus, crop rotation, water conservation)
+  task: object_detection (bounding boxes)
+  motivation: fallow is a low-accuracy class in the USDA Cropland Data Layer; Prithvi's
+    ViT emits single-scale features ill-suited to detection heads, and full fine-tuning
+    is computationally prohibitive
+input:
+  primary_dataset: single HLS v2.0 Sentinel-2 tile (T13TGE, eastern Colorado, 2022)
+  bands:
+  - B02 (Blue)
+  - B03 (Green)
+  - B04 (Red)
+  - B8A (NIR narrow)
+  - B11 (SWIR1)
+  - B12 (SWIR2)
+  temporal_context: single (one growing season)
+  spatial_resolution: 30m
+  patches: 5,000 training and 500 validation patches per epoch
+labels:
+  type: bounding boxes derived from USDA CDL 2022 masks
+  source: automated conversion of CDL fallow masks to boxes (no hand-labeled boxes
+    exist)
+  amount: unknown
+  class_balance: unknown
+  caveat: CDL fallow labels are themselves inaccurate, injecting label noise
+foundation_model:
+  model: Prithvi-EO-2.0 (300M-class; ~319-329M total parameters per configuration)
+  pretrained_domain_match: very high — same six-band HLS interface and 30m resolution
+adaptation:
+  backbone:
+    frozen: mostly — adapted via PEFT rather than full fine-tuning
+    fine_tuning: LoRA-only and a hybrid PEFT scheme (selective backbone unfreezing)
+  neck_designs_compared:
+    pseudo_multi_scale: reshape tokens from Prithvi blocks 5, 11, 17, 23 into spatial
+      maps
+    lite_vit_adapter: output-only additive fusion of a convolutional hierarchy
+    full_vit_adapter: bidirectional injector-extractor cross-attention at multiple
+      depths
+  heads_compared:
+  - Faster R-CNN (two-stage, anchor-based reference)
+  - FCOS (one-stage, anchor-free)
+  initialization: pretrained
+  loss:
+  - GIoU box regression
+  - DIoU box regression
+  trainable_parameters:
+    Faster_R-CNN_LoRA: 25.44M trainable / 329.33M total
+    FCOS_LoRA: 15.68M trainable / 319.57M total
+    FCOS_LoRA_Lite_ViT_Adapter: 14.38M trainable / 318.27M total
+  rationale:
+  - 'Observation: the ViT backbone produces single-scale features. Implication: detection
+    heads need a multi-scale pyramid. Decision: add a ViT-Adapter neck rather than
+    reshaping single-stride tokens.'
+  - 'Observation: full backbone fine-tuning of a GFM is computationally prohibitive.
+    Implication: adaptation must be parameter-efficient. Decision: use LoRA / hybrid
+    PEFT with selective unfreezing.'
+  - 'Observation: fallow fields are irregular in shape. Implication: center-aware
+    localization should help. Decision: use DIoU loss with a one-stage anchor-free
+    head.'
+adaptation_levels:
+- 3
+- 4
+- 7
+adaptation_levels_note:
+  compared_head_to_head: true
+  detail: LoRA-only vs hybrid PEFT with selective backbone unfreezing, across three
+    neck designs
+training:
+  optimizer: AdamW
+  weight_decay: 0.0001
+  learning_rate: 1.0e-4 initial
+  scheduler: CosineAnnealingLR (T_max 200, eta_min 1e-6)
+  batch_size: 64
+  epochs: 200 maximum
+  hardware: a single NVIDIA A100 GPU
+  seeds: split seed 42, global seed 2
+evaluation:
+  metrics:
+  - mAP@50
+  - mAP@75
+  - mAP@[0.50:0.05:0.95]
+  data_split:
+    spatial_holdout: the HLS tile partitioned spatially 70% / 15% / 15%
+results:
+  best_configuration: Lite ViT-Adapter + FCOS one-stage head with DIoU loss
+  best_mAP50: 0.9479
+  improvements:
+    adapter_free_one_stage_under_LoRA: +6.42% over the adapter-free anchor-based approach
+    best_configuration: +25.70% over the adapter-free anchor-based baseline
+lessons:
+- a lightweight (Lite) ViT-Adapter beat both the pseudo multi-scale neck and the Full
+  ViT-Adapter while using the fewest trainable parameters (14.38M)
+- lightweight spatial prior fusion plus selective backbone unfreezing lets Prithvi
+  capture local patterns that reshaped single-stride tokens miss
+- a one-stage anchor-free head (FCOS) with DIoU loss suits irregular field shapes
+  better than a two-stage anchor-based Faster R-CNN
+- PEFT (LoRA) is sufficient — cited prior work finds LoRA and ViT-Adapter match or
+  exceed full fine-tuning in-distribution while improving generalisation
+- synthesizing feature pyramids by scaling single-stride tokens sacrifices spatial
+  heterogeneity
+failure_modes:
+- confined to a single HLS tile and a single growing season (2022)
+- CDL fallow ground truth is noisy, affecting both training and evaluation
+- axis-aligned bounding boxes cannot capture the rotational extent of diagonal field
+  boundaries, overestimating area
+- temporal dynamics and multi-tile generalisability are unaddressed
+bibliography:
+  title: 'Adapting Prithvi-EO for Fallow Detection for Food-Water Nexus: ViT-Adapter
+    Necks and Parameter-Efficient Backbone tuning of Geospatial Foundation Model'
+  authors:
+  - Sk Muhammad Asif
+  - Orhun Aydin
+  arxiv_id: 2606.12218v1
+  doi: 10.48550/arXiv.2606.12218
+  doi_type: arxiv-assigned; a journal DOI may also exist and is not recorded here
+  primary_category: cs.CV
+  published: '2026-06-10T15:31:37Z'
+  updated: '2026-06-10T15:31:37Z'
+  abs_url: http://arxiv.org/abs/2606.12218v1
+  pdf_url: https://arxiv.org/pdf/2606.12218v1
+review_status: draft
+provenance:
+  source: 2606.12218v1
+  extracted_by: kb_pipeline

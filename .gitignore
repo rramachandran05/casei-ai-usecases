@@ -1,0 +1,17 @@
+# workspace conventions
+daily-notes/
+private/
+*.local.md
+.env
+.DS_Store
+
+# pilot data & outputs (large / regenerable / potentially sensitive)
+data/
+outputs/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/

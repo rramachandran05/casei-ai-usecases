@@ -1,0 +1,156 @@
+model: Prithvi-EO-2.0
+family: Earth-observation geospatial foundation model
+variants:
+- Prithvi-EO-2.0-300M
+- Prithvi-EO-2.0-300M-TL
+- Prithvi-EO-2.0-600M
+- Prithvi-EO-2.0-600M-TL
+predecessor: Prithvi-EO-1.0
+pretraining:
+  data:
+  - HLS (NASA Harmonized Landsat Sentinel-2)
+  coverage: global
+  period: 2014-2023
+  samples:
+    training: 4200000
+    validation: 46000
+  sample_shape: 4x256x256 (T x H x W), random-cropped to 4x224x224
+  bands:
+  - Blue
+  - Green
+  - Red
+  - NIR
+  - SWIR1
+  - SWIR2
+  band_note: the six spectral bands common to both Landsat and Sentinel-2
+  spatial_resolution: 30m
+  temporal: multi-temporal (sequences of 4 timestamps, 1-6 months apart)
+  objective: masked autoencoding (MAE), MSE loss in pixel space
+  compute:
+    hardware: A100 40GB GPUs on the JUWELS Booster partition (JSC)
+    epochs: 400
+    gpus: 80 (300M) / 240 (600M)
+    gpu_hours: ~21,000 (300M) / ~58,000 (600M)
+  optimization:
+    global_batch_size: 3840
+    local_batch_size: 48 (ViT-L) / 16 (ViT-H)
+    max_learning_rate: 0.0005
+    scheduler: cosine with 40-epoch linear warmup from 1e-6
+    weight_decay: 0.05
+    augmentation:
+    - random crop to 224x224
+    - random horizontal flip
+architecture:
+  family: Vision Transformer (MAE encoder-decoder, asymmetric)
+  patch_embedding: 3D spatiotemporal (Conv3D over (t,h,w) cubes, t=1)
+  positional_encoding: 3D sin/cos (time, height, width combined)
+  metadata_encoding: latitude/longitude and year/day-of-year encoded with 1D sin/cos
+    and added to tokens as a learned weighted sum (bias-style), with random drop (p=0.1)
+    during pretraining so the model tolerates missing metadata
+  model_sizes:
+  - 300M (ViT-L)
+  - 600M (ViT-H)
+supported_input_characteristics:
+  spatial: true
+  temporal: true
+  metadata:
+  - latitude
+  - longitude
+  - year
+  - day_of_year
+  metadata_optional: true
+known_downstream_task_types:
+- semantic segmentation
+- classification
+- regression
+- multi-temporal analysis
+adaptation_mechanisms:
+- full fine-tuning
+- frozen backbone
+- decoder/head replacement
+- available through TerraTorch (PyTorch Lightning + TorchGeo)
+fine_tuning_cost: all fine-tuning experiments in the paper ran on a single GPU
+evaluation:
+  benchmark: GEO-Bench (6 classification + 6 segmentation datasets)
+  protocol: 10 hyperparameter trials, then 10 repeated runs with different seeds
+  metrics:
+  - accuracy (classification)
+  - mIoU (segmentation)
+  - precision
+  - recall
+  - F1
+  headline_results:
+  - outperforms Prithvi-EO-1.0 by up to 8% across GEO-Bench tasks
+  - outperforms six other geospatial foundation models across 0.1m-15m resolutions
+  sme_downstream_tasks:
+  - flood mapping (Sen1Floods11)
+  - wildfire scar mapping
+  - burn scar intensity
+  - landslide detection (Landslide4Sense)
+  - land cover and crop mapping
+  - above ground biomass
+  - gross primary productivity
+known_limitations:
+- optical/multispectral imagery only; not multimodal (no SAR in pretraining)
+- fixed six-band HLS reflectance band set
+- 30m pretraining resolution (though it transfers to 0.1m-15m tasks)
+- cloud sensitivity; pretraining samples were filtered to <20% cloudy pixels
+- benefits and limits of adding other modalities at fine-tuning time are named as
+  future work, not established
+availability:
+  license: permissive open-source
+  weights: https://huggingface.co/ibm-nasa-geospatial/Prithvi-EO-2.0
+  code: https://github.com/NASA-IMPACT/Prithvi-EO-2.0
+  toolkit: https://github.com/IBM/terratorch
+bibliography:
+  title: 'Prithvi-EO-2.0: A Versatile Multi-Temporal Foundation Model for Earth Observation
+    Applications'
+  authors:
+  - Daniela Szwarcman
+  - Sujit Roy
+  - Paolo Fraccaro
+  - Þorsteinn Elí Gíslason
+  - Benedikt Blumenstiel
+  - Rinki Ghosal
+  - Pedro Henrique de Oliveira
+  - Joao Lucas de Sousa Almeida
+  - Rocco Sedona
+  - Yanghui Kang
+  - Srija Chakraborty
+  - Sizhe Wang
+  - Carlos Gomes
+  - Ankur Kumar
+  - Myscon Truong
+  - Denys Godwin
+  - Hyunho Lee
+  - Chia-Yu Hsu
+  - Rohit Lal
+  - Ata Akbari Asanjan
+  - Besart Mujeci
+  - Disha Shidham
+  - Trevor Keenan
+  - Paulo Arevalo
+  - Wenwen Li
+  - Hamed Alemohammad
+  - Pontus Olofsson
+  - Christopher Hain
+  - Robert Kennedy
+  - Bianca Zadrozny
+  - David Bell
+  - Gabriele Cavallaro
+  - Campbell Watson
+  - Manil Maskey
+  - Rahul Ramachandran
+  - Juan Bernabe Moreno
+  arxiv_id: 2412.02732v3
+  doi: 10.48550/arXiv.2412.02732
+  doi_type: arxiv-assigned; a journal DOI may also exist and is not recorded here
+  primary_category: cs.CV
+  published: '2024-12-03T17:59:50Z'
+  updated: '2026-03-06T20:25:52Z'
+  abs_url: http://arxiv.org/abs/2412.02732v3
+  pdf_url: https://arxiv.org/pdf/2412.02732v3
+review_status: draft
+provenance:
+  source: 2412.02732v3
+  extracted_by: kb_pipeline

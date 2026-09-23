@@ -1,0 +1,894 @@
+
+# CASEI-to-Prithvi-EO Labeled Data Discovery Pilot
+
+## 1. Goal
+
+Determine whether NASA's **CASEI airborne and field campaign catalog can be systematically mined to identify labeled or label-generating datasets suitable for adapting Earth-observation foundation models such as Prithvi-EO**.
+
+The pilot tests two related hypotheses:
+
+**H1 — Data opportunity hypothesis**
+
+CASEI contains scientifically valuable supervision that is currently underused for GeoFM adaptation, including direct labels, continuous measurements, field observations, airborne products, and labels that can be derived from campaign measurements.
+
+**H2 — Automated discovery hypothesis**
+
+Given a GeoFM model specification, an automated system can search the full CASEI catalog and identify, characterize, filter, and prioritize potentially useful labeled datasets.
+
+The ultimate concept is:
+
+> **Model specification → CASEI search → supervision opportunities → use-case inference → satellite coincidence → compatibility assessment → ranked candidates**
+
+The pilot ends with:
+
+1. **A searchable candidate dataset inventory.**
+2. **A prototype specification for a GeoFM–CASEI Dataset Matching Agent.**
+
+Actual fine-tuning of Prithvi is outside the first pilot, although the outputs should make subsequent adaptation experiments straightforward.
+
+---
+
+# 2. Important Design Principle
+
+The system should **not start with a small predefined set of use cases**.
+
+Instead:
+
+> **Discover first → infer potential use cases → evaluate compatibility → rank.**
+
+Known use cases such as flood mapping, burn scars, land cover, biomass, vegetation state, etc. can be supplied as examples to help the system reason about task mappings, but they should **not constrain discovery**.
+
+This is important because the most interesting outcome may be a use case we did not anticipate.
+
+CASEI is particularly suitable for this approach because it already organizes campaign, platform, instrument, deployment, measurement, geophysical concept, and data-product metadata relationally. Its API can query complete tables as well as individual/search-matched records.
+
+As of the current CASEI Explore interface, the catalog exposes approximately **194 campaigns, 153 platforms, 605 instruments, and 2,607 data products**.
+
+---
+
+# 3. Unit of Discovery
+
+Do **not** treat a CASEI campaign as a single candidate.
+
+The fundamental candidate should be:
+
+**Campaign × Data Product × Measurement/Target × Proposed Learning Task × Satellite Input**
+
+For example:
+
+`ABoVE × airborne canopy-height product × canopy height × pixel regression × HLS`
+
+A single CASEI product may therefore generate several candidate records.
+
+This distinction is important because a campaign containing 50 products could contain only 3 useful GeoFM supervision opportunities—or 20.
+
+---
+
+# 4. Inputs
+
+## 4.1 Foundation-model specification
+
+The production implementation should accept a structured model card such as:
+
+```yaml
+model:
+  name: Prithvi-EO
+  version: TBD
+
+input:
+  sensors:
+    - HLS
+  supported_satellites:
+    - Sentinel-2
+    - Landsat
+  bands: TBD
+  spatial_resolution: TBD
+  temporal_context: TBD
+  input_size: TBD
+
+pretraining:
+  domain: earth_observation
+  data_type: multispectral
+  geography: global
+
+adaptation:
+  possible_tasks:
+    - classification
+    - segmentation
+    - regression
+    - change_detection
+    - object_detection
+    - other
+
+constraints:
+  TBD
+```
+
+The model card should be treated as a **machine-readable compatibility specification**, not merely descriptive documentation.
+
+---
+
+## 4.2 Example use cases
+
+Optional examples may be provided:
+
+```yaml
+examples:
+  - flood_mapping
+  - burn_scar_mapping
+  - land_cover
+  - biomass_estimation
+  - vegetation_classification
+```
+
+These examples help semantic reasoning but MUST NOT constrain catalog exploration.
+
+---
+
+# 5. CASEI Harvesting
+
+The first stage should retrieve the **entire published CASEI catalog through the API**, rather than issuing only keyword searches.
+
+CASEI's documented architecture is PostgreSQL/Django based, with API endpoints corresponding to database tables; its core models include Campaign, Platform, Instrument and Deployment, with additional relational metadata tables.
+
+Harvest at minimum:
+
+| Metadata group | Fields/concepts needed |
+|---|---|
+| Campaign | name, description, science objectives |
+| Geography | region, geometry/bounding region if available |
+| Time | campaign dates, deployments, events |
+| Science | focus areas, phenomena, geophysical concepts |
+| Platform | airborne, ground, mobile, aquatic, etc. |
+| Instrument | instrument name/type |
+| Measurement | measured variables |
+| Data product | product name, description, DOI |
+| Measurement characteristics | type, style, vertical region |
+| Format | NetCDF, HDF, GeoTIFF, CSV, etc. |
+| Relationships | campaign ↔ platform ↔ instrument ↔ product |
+
+CASEI campaign pages also provide campaign events and associated data-product DOI links, making these relationships particularly useful for temporal and product-level reasoning.
+
+Create a local normalized cache so repeated LLM/API queries are not necessary.
+
+---
+
+# 6. Stage 1 — Identify Every Possible Source of Supervision
+
+The first semantic task is:
+
+> **Could this CASEI product provide a target, reference observation, weak label, or paired measurement from which a GeoFM learning target could reasonably be constructed?**
+
+Do not restrict "label" to conventional segmentation masks.
+
+Create the following label taxonomy.
+
+| Label type | Examples | Potential learning task |
+|---|---|---|
+| Raster categorical | land cover, snow class, flood extent | semantic segmentation |
+| Raster continuous | biomass, temperature, soil moisture | pixel regression |
+| Polygon | burn perimeter, vegetation community | segmentation |
+| Point observation | soil sample, species observation | point-supervised learning |
+| Field plot | biomass, canopy characteristics | regression/classification |
+| Transect | vegetation/environmental measurement | sparse supervision |
+| Object/location | trees, lakes, craters, features | object detection |
+| Event | fire, flood, storm impact | event/change detection |
+| Airborne imagery | high-resolution mapped feature | segmentation/detection |
+| Airborne retrieval | canopy height, surface parameter | regression |
+| Hyperspectral measurement | chemistry/material/species | classification/regression |
+| LiDAR | height/structure/topography | regression/structure mapping |
+| Radar | moisture/structure/roughness | regression/classification |
+| Temporal observations | phenology/change | temporal classification |
+| Before/after observation | disturbance | change detection |
+| Spectral measurements | field spectra | spectral prediction/classification |
+| Instrument retrieval | derived geophysical variable | regression |
+| Human/campaign annotation | observed class/state | classification |
+| Proxy label | correlated observation | weak supervision |
+| Derived label | value generated from raw measurements | derived supervision |
+| Multimodal pairing | EO + airborne/field measurement | multimodal learning |
+
+Each discovered product should be assigned:
+
+`DIRECT_LABEL`
+
+`DERIVED_LABEL`
+
+`WEAK_OR_PROXY_LABEL`
+
+`MULTIMODAL_PAIR`
+
+`NO_OBVIOUS_LABEL`
+
+This classification should be retained in the output because label provenance matters independently of model compatibility.
+
+---
+
+# 7. Stage 2 — Infer All Plausible GeoFM Tasks
+
+For each potentially label-generating product, infer **all reasonable learning tasks** rather than a single task.
+
+Canonical task vocabulary:
+
+| Task family | Example |
+|---|---|
+| Semantic segmentation | flood extent |
+| Instance segmentation | individual tree crowns |
+| Object detection | discrete surface features |
+| Pixel regression | biomass |
+| Patch regression | plot-level biomass |
+| Patch classification | ecosystem type |
+| Multi-label classification | several surface conditions |
+| Ordinal classification | severity classes |
+| Change detection | disturbance |
+| Temporal classification | phenological stage |
+| Temporal regression | vegetation trajectory |
+| Anomaly/event detection | disturbance event |
+| Super-resolution | satellite → airborne-scale target |
+| Downscaling | coarse environmental variable → finer surface field |
+| Image-to-image prediction | one geophysical surface → another |
+| Spectral prediction | multispectral → hyperspectral properties |
+| Cross-modal prediction | optical imagery → LiDAR/radar-derived variable |
+| Contrastive/multimodal learning | colocated satellite/field observations |
+| Weakly supervised learning | points/plots supervising imagery |
+
+Do not require these tasks to already exist in published GeoFM benchmarks.
+
+Novelty is desirable.
+
+---
+
+# 8. Stage 3 — Use-Case Compatibility
+
+Now ask:
+
+> **Is the CASEI measurement something that should plausibly be observable or inferable from Prithvi-EO imagery?**
+
+Assign:
+
+### HIGH
+
+Clear physical or observational relationship to land-surface imagery.
+
+Examples:
+
+- vegetation structure
+- inundation
+- burn severity
+- snow/ice
+- land cover
+- surface water
+- crop state
+- canopy properties
+- surface temperature where appropriate auxiliary information exists.
+
+### MEDIUM
+
+Indirect or partially observable relationship.
+
+Examples:
+
+- soil properties
+- ecosystem function
+- some atmospheric/surface interactions
+- geophysical variables requiring temporal aggregation
+- variables whose relationship to optical reflectance is indirect.
+
+### LOW
+
+Little direct information is expected in Prithvi's EO inputs.
+
+Examples might include upper-atmospheric chemistry or measurements far removed from surface spectral/morphological signatures.
+
+**LOW does not mean discard.**
+
+The system should retain these records because they may become relevant to:
+
+- another foundation model,
+- multimodal GeoFMs,
+- VLMs,
+- future EO + atmospheric models.
+
+---
+
+# 9. Stage 4 — Satellite Coincidence Test
+
+For every candidate, determine whether compatible satellite imagery exists at the required:
+
+**location × date/time**
+
+Search in this order:
+
+1. HLS
+2. Sentinel-2
+3. Landsat
+
+The system should determine:
+
+```text
+CASEI observation
+      ↓
+geometry / AOI
+      +
+observation time
+      ↓
+Satellite search
+      ↓
+coincident scenes
+```
+
+Record:
+
+- satellite
+- acquisition time
+- temporal offset from label
+- spatial intersection
+- cloud coverage where available
+- usable scene count
+- temporal sequence availability where relevant.
+
+The system should **not automatically reject a campaign because it predates HLS** if suitable Landsat observations exist.
+
+---
+
+# 10. Stage 5 — Data Compatibility
+
+Compatibility should be assessed independently along several axes.
+
+### Spatial compatibility
+
+Can the label reasonably be aligned with the Prithvi input?
+
+Examples:
+
+- 30 m raster ↔ HLS = strong
+- 1 m airborne raster → aggregate to 30 m = transformable
+- sparse field plots = transformable
+- isolated point measurements with uncertain footprint = weaker.
+
+### Temporal compatibility
+
+Determine whether satellite and label observations represent approximately the same surface state.
+
+This threshold should depend on the phenomenon.
+
+Flood:
+
+`hours–days`
+
+Vegetation structure:
+
+`days–weeks/months`
+
+Land-cover class:
+
+`months`
+
+Thus temporal coincidence should be **phenomenon dependent**, not one fixed threshold.
+
+### Spectral/input compatibility
+
+Can the required model inputs be constructed from the available coincident imagery?
+
+### Geometric compatibility
+
+Determine whether data can be:
+
+- georeferenced,
+- reprojected,
+- co-registered,
+- rasterized,
+- aggregated,
+- tiled.
+
+### Label compatibility
+
+Determine whether supervision can be converted into the target representation required by the learning task.
+
+---
+
+# 11. Native vs Transformable Compatibility
+
+Every candidate receives one of three states.
+
+## NATIVE
+
+Can approximately be used directly.
+
+Example:
+
+`30 m raster label + coincident HLS`
+
+## TRANSFORMABLE
+
+Usable after a defensible transformation.
+
+Examples:
+
+`1 m airborne biomass → 30 m aggregated biomass`
+
+`field plots → patch labels`
+
+`polygon flood boundary → raster mask`
+
+`airborne hyperspectral retrieval → HLS-aligned raster`
+
+## INCOMPATIBLE
+
+No scientifically defensible transformation exists for the current model/task.
+
+Critically:
+
+> **Transformation cost and scientific validity must be recorded separately.**
+
+A technically easy transformation can still be scientifically invalid.
+
+---
+
+# 12. Candidate Ranking
+
+Avoid a false precision numerical score during the pilot.
+
+Use:
+
+**HIGH**
+
+**MEDIUM**
+
+**LOW**
+
+but require explicit reasoning.
+
+Consider:
+
+| Factor | Question |
+|---|---|
+| Science fit | Is target meaningfully inferable from EO? |
+| Label strength | Direct, derived, or proxy? |
+| Spatial match | Can it align to EO pixels? |
+| Temporal match | Is coincidence meaningful? |
+| Satellite coverage | Does suitable imagery exist? |
+| Transformation | Native or transformable? |
+| Scale | Enough samples/area/time? |
+| Diversity | Multiple locations/events? |
+| Accessibility | Can the data actually be obtained? |
+| Novelty | Does this enable something not already common? |
+
+Example:
+
+```yaml
+priority: HIGH
+
+reasoning:
+  science_fit: HIGH
+  label_strength: DIRECT
+  satellite_overlap: HIGH
+  spatial_compatibility: TRANSFORMABLE
+  temporal_compatibility: HIGH
+  novelty: HIGH
+
+summary:
+  Airborne canopy-height measurements provide strong
+  continuous supervision. Measurements overlap Landsat/HLS
+  acquisitions and can be aggregated to the model grid.
+```
+
+The reasoning is more important than the rating itself.
+
+---
+
+# 13. Two Rankings Should Be Preserved
+
+Do not collapse everything into a single ranking.
+
+Maintain:
+
+### A. Label-value ranking
+
+How scientifically valuable is the supervision?
+
+### B. Prithvi-readiness ranking
+
+How easily can it be used with this specific model?
+
+This distinction could reveal extremely valuable datasets that are poor matches for Prithvi but excellent matches for a future:
+
+- hyperspectral FM,
+- SAR FM,
+- multimodal GeoFM,
+- VLM,
+- weather model.
+
+That becomes an important secondary result of the study.
+
+---
+
+# 14. Output Candidate Table
+
+The primary pilot product should contain approximately these fields:
+
+```text
+candidate_id
+
+CASEI
+  campaign
+  campaign_id
+  product
+  product_id
+  DOI
+  platform
+  instrument
+
+LABEL
+  target_variable
+  label_description
+  label_type
+  label_provenance
+  geometry
+  spatial_resolution
+  temporal_resolution
+
+USE_CASE
+  phenomenon
+  proposed_task
+  task_description
+  potential_science_question
+
+MODEL
+  model_name
+  model_version
+
+SATELLITE
+  HLS_overlap
+  Sentinel2_overlap
+  Landsat_overlap
+  scene_count
+  temporal_offset
+
+COMPATIBILITY
+  science_fit
+  spatial_fit
+  temporal_fit
+  spectral_fit
+  label_fit
+  overall_compatibility
+  native_or_transformable
+
+TRANSFORMATION
+  required_steps
+  estimated_complexity
+
+RANKING
+  label_value
+  Prithvi_readiness
+  novelty
+  overall_priority
+
+EVIDENCE
+  metadata_evidence
+  reasoning
+  assumptions
+  uncertainties
+  URLs
+```
+
+This table should be exportable to:
+
+- CSV
+- Parquet
+- JSON
+
+and eventually presented through a lightweight searchable UI.
+
+---
+
+# 15. Progressive Evidence Model
+
+A major implementation requirement is to distinguish three levels of evidence.
+
+### Level 1 — CASEI metadata inference
+
+"This product appears potentially useful."
+
+### Level 2 — Archive/product metadata confirmation
+
+Inspect DOI/CMR/product metadata and confirm:
+
+- actual variables,
+- file types,
+- resolution,
+- geography,
+- temporal coverage.
+
+### Level 3 — Data inspection
+
+Open representative files and verify:
+
+- coordinates,
+- dimensions,
+- projection,
+- variable ranges,
+- usable labels.
+
+The agent should never describe a Level-1 inference as a confirmed training dataset.
+
+This is one of the most important guardrails in the system.
+
+---
+
+# 16. Recommended Agent Architecture
+
+The prototype should use a **hybrid deterministic + LLM architecture**.
+
+```text
+                MODEL CARD
+                    │
+                    ▼
+           Model Profile Builder
+                    │
+                    ▼
+CASEI API → Catalog Harvester
+                    │
+                    ▼
+              Normalizer
+                    │
+                    ▼
+        Label Opportunity Detector
+                    │
+                    ▼
+           Task / Use-Case Mapper
+                    │
+                    ▼
+         Satellite Coincidence Tool
+                    │
+                    ▼
+          Compatibility Engine
+                    │
+                    ▼
+             Ranking Agent
+                    │
+                    ▼
+          Candidate Inventory
+```
+
+### Deterministic code should handle
+
+- CASEI API retrieval
+- relationship traversal
+- coordinates
+- dates
+- satellite intersection
+- band comparison
+- resolutions
+- file formats
+- threshold logic
+- filtering
+- persistence.
+
+### LLM reasoning should handle
+
+- interpreting measurement semantics
+- identifying potential labels
+- proposing learning tasks
+- determining likely EO observability
+- suggesting transformations
+- explaining rankings
+- generating candidate rationale.
+
+The LLM should **not invent missing metadata**.
+
+Missing information must explicitly remain:
+
+`UNKNOWN`
+
+---
+
+# 17. Agent Operating Modes
+
+The eventual agent should support two modes.
+
+## Mode A — Discovery
+
+Input:
+
+> "Here is Prithvi-EO."
+
+Output:
+
+> "Here are all CASEI opportunities that could potentially provide supervision for this model."
+
+This is the **pilot mode**.
+
+## Mode B — Targeted Search
+
+Input:
+
+> "I want to adapt Prithvi for biomass estimation."
+
+Output:
+
+> "Here are the CASEI datasets most likely to support that task."
+
+This becomes the operational **GeoFM–CASEI Dataset Matching Agent**.
+
+---
+
+# 18. Suggested Implementation Components
+
+A Claude Code/Codex implementation could use:
+
+```text
+casei_geofm/
+│
+├── config/
+│   ├── model_card.yaml
+│   └── task_taxonomy.yaml
+│
+├── casei/
+│   ├── client.py
+│   ├── harvest.py
+│   └── normalize.py
+│
+├── discovery/
+│   ├── label_detector.py
+│   ├── task_mapper.py
+│   └── science_mapper.py
+│
+├── satellite/
+│   ├── hls.py
+│   ├── sentinel2.py
+│   └── landsat.py
+│
+├── compatibility/
+│   ├── spatial.py
+│   ├── temporal.py
+│   ├── spectral.py
+│   ├── label.py
+│   └── transform.py
+│
+├── ranking/
+│   └── ranker.py
+│
+├── schemas/
+│   ├── candidate.py
+│   └── model.py
+│
+├── outputs/
+│
+└── run_pipeline.py
+```
+
+This modularity matters because satellite matching, CASEI metadata retrieval, semantic reasoning, and GeoFM compatibility will evolve independently.
+
+---
+
+# 19. Pilot Workflow
+
+The first experiment should therefore execute:
+
+**STEP 1**
+
+Harvest the complete CASEI inventory.
+
+**STEP 2**
+
+Create normalized campaign-product-instrument-measurement records.
+
+**STEP 3**
+
+Run every data product through the Label Opportunity Detector.
+
+**STEP 4**
+
+Generate all plausible supervision types and tasks.
+
+**STEP 5**
+
+Assess whether each target could plausibly be learned from Prithvi inputs.
+
+**STEP 6**
+
+Check HLS/Sentinel-2/Landsat spatial-temporal coincidence.
+
+**STEP 7**
+
+Classify compatibility:
+
+`NATIVE / TRANSFORMABLE / INCOMPATIBLE`
+
+**STEP 8**
+
+Assign:
+
+`HIGH / MEDIUM / LOW`
+
+for both label value and Prithvi readiness, with rationale.
+
+**STEP 9**
+
+Produce the complete searchable candidate table.
+
+**STEP 10**
+
+Human-review a stratified sample of:
+
+- HIGH
+- MEDIUM
+- LOW
+- direct labels
+- derived labels
+- weak labels
+- different task families.
+
+Use the review to improve prompts/rules before building the operational agent.
+
+---
+
+# 20. What the Pilot Should Measure
+
+The evaluation is not primarily "How many datasets did we find?"
+
+Measure:
+
+**Catalog coverage**
+
+What percentage of CASEI products were examined?
+
+**Opportunity yield**
+
+What fraction generated at least one plausible supervision opportunity?
+
+**Task diversity**
+
+How many different adaptation-task families emerged?
+
+**Label diversity**
+
+How many direct, derived, weak, sparse, airborne, field, etc. label sources were found?
+
+**Compatibility**
+
+How many candidates were native versus transformable?
+
+**Satellite coincidence**
+
+How many candidates have viable HLS/Sentinel/Landsat observations?
+
+**Novel discovery**
+
+How many scientifically credible use cases emerged that were not among the supplied examples?
+
+**Human agreement**
+
+Would an EO scientist agree with the agent's label interpretation and compatibility reasoning?
+
+---
+
+# 21. Most Important Research Question
+
+The strongest scientific framing for the pilot is not:
+
+> "Can CASEI provide training data for Prithvi?"
+
+It is:
+
+> **"Can metadata describing NASA's historical field and airborne observations be systematically transformed into an inventory of supervision opportunities for Earth-observation foundation models?"**
+
+Prithvi-EO becomes the **reference model used to test the concept**.
+
+That framing is substantially broader and, in my view, more interesting.
+
+It creates a reusable framework:
+
+**CASEI**
+
+→ field/airborne observations
+
+→ machine-learning supervision
+
+→ GeoFM compatibility
+
+→ adaptation opportunities.
+
+And it naturally extends later to:
+
+**Prithvi-EO → SAR FM → hyperspectral FM → weather FM → multimodal GeoFM → VLM.**
