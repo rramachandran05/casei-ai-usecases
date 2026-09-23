@@ -1,0 +1,138 @@
+{
+ "success": true,
+ "message": "",
+ "data": [
+  {
+   "uuid": "79a480f9-8272-4e25-b0fe-3f8703be934b",
+   "concept_id": "C2731654186-ORNL_CLOUD",
+   "doi": "10.3334/ORNLDAAC/1941",
+   "long_name": "",
+   "cmr_short_name": "MASTER_FIREX_AQ_JulySept_2019_1941",
+   "cmr_entry_title": "MASTER: FIREX-AQ Airborne Campaign, Western-Central USA, Summer 2019",
+   "cmr_projects": "[{'ShortName': 'MASTER', 'LongName': 'MODIS/ASTER Airborne Simulator'}, {'ShortName': 'FIREX-AQ', 'LongName': 'Fire Influence on Regional to Global Environments and Air Quality'}]",
+   "cmr_dates": "[{'RangeDateTimes': [{'BeginningDateTime': '2019-07-22T00:00:00.000Z', 'EndingDateTime': '2019-09-03T23:59:59.999Z'}], 'EndsAtPresentFlag': False}]",
+   "cmr_plats_and_insts": "[{'Type': 'Jet', 'ShortName': 'NASA DC-8', 'LongName': 'NASA Douglas DC-8', 'Instruments': [{'ShortName': 'MASTER', 'LongName': 'MODIS/ASTER Airborne Simulator'}]}]",
+   "cmr_science_keywords": "[{'Category': 'EARTH SCIENCE', 'Topic': 'SPECTRAL/ENGINEERING', 'Term': 'VISIBLE WAVELENGTHS', 'VariableLevel1': 'VISIBLE RADIANCE'}, {'Category': 'EARTH SCIENCE', 'Topic': 'SPECTRAL/ENGINEERING', 'Term': 'INFRARED WAVELENGTHS', 'VariableLevel1': 'THERMAL INFRARED'}, {'Category': 'EARTH SCIENCE', 'Topic': 'SPECTRAL/ENGINEERING', 'Term': 'INFRARED WAVELENGTHS', 'VariableLevel1': 'INFRARED RADIANCE'}]",
+   "cmr_abstract": "This dataset includes Level 1B (L1B) and Level 2 (L2) data products from the MODIS/ASTER Airborne Simulator (MASTER) instrument. The spectral data were collected as part of the Fire Influence on Regional to Global Environments and Air Quality (FIREX-AQ) program during 21 flights aboard a NASA DC-8 aircraft over the central and western U.S. from 2019-07-22 to 2019-09-03. The purpose of these flights was to measure emissions and to characterize the aerosols in the smoke plume above and downwind of the fire, and to determine the overall spatial extent of wildfires and prescribed fires. Data products include L1B georeferenced multispectral imagery of calibrated radiance in 50 bands covering wavelengths of 0.460 to 12.879 micrometers at approximately 20-meter spatial resolution. Derived L2 data products are emissivity in 5 bands in thermal infrared range (8.58 to 12.13 micrometers) and land surface temperature. The L1B file format is HDF-4, and L2 products are provided in ENVI and KMZ formats. In addition, the dataset includes the flight path, spectral band information, instrument configuration, ancillary notes, and summary information for each flight, and browse images derived from each L1B data file.",
+   "cmr_data_formats": "['multiple']",
+   "date_queried": "2025-09-29T09:42:57.361850-07:00",
+   "campaigns": [
+    "7c6737d4-10a8-46f7-af06-33eaa5248b35"
+   ],
+   "instruments": [
+    "1a41d565-ca10-4464-8479-13a331639bf5"
+   ],
+   "platforms": [
+    "80155bc3-2cde-4978-932e-5c69fd13212d"
+   ],
+   "collection_periods": [
+    "fb7cd24c-1be9-4c01-8af8-e90a84c93354"
+   ]
+  },
+  {
+   "uuid": "fec77829-66b9-42d0-a825-77166a8c6980",
+   "concept_id": "C1979080915-GHRC_DAAC",
+   "doi": "10.5067/CAMEX-4/MULTIPLE/DATA101",
+   "long_name": "",
+   "cmr_short_name": "c4dcm",
+   "cmr_entry_title": "CAMEX-4 CLOUD MICROPHYSICS V1",
+   "cmr_projects": [
+    {
+     "LongName": "Convection and Moisture Experiment 4",
+     "ShortName": "CAMEX-4"
+    }
+   ],
+   "cmr_dates": [
+    {
+     "RangeDateTimes": [
+      {
+       "EndingDateTime": "2001-09-25T03:08:00.000Z",
+       "BeginningDateTime": "2001-08-18T17:40:00.000Z"
+      }
+     ],
+     "EndsAtPresentFlag": false
+    }
+   ],
+   "cmr_plats_and_insts": [
+    {
+     "Type": "Jet",
+     "LongName": "NASA Douglas DC-8",
+     "ShortName": "NASA DC-8",
+     "Instruments": [
+      {
+       "LongName": "Forward Scattering Spectrometer Probe",
+       "ShortName": "FSSP"
+      },
+      {
+       "ShortName": "PARTICLE SPECTROMETERS"
+      },
+      {
+       "LongName": "Particle Measuring Systems 2D-C Probe",
+       "ShortName": "PMS 2D-C PROBE"
+      },
+      {
+       "LongName": "Particle Measuring Systems 2D-P Probe",
+       "ShortName": "PMS 2D-P PROBE"
+      }
+     ]
+    }
+   ],
+   "cmr_science_keywords": [
+    {
+     "Term": "Clouds",
+     "Topic": "Atmosphere",
+     "Category": "EARTH SCIENCE",
+     "VariableLevel1": "Cloud Droplet Distribution"
+    },
+    {
+     "Term": "Aerosols",
+     "Topic": "Atmosphere",
+     "Category": "EARTH SCIENCE",
+     "VariableLevel1": "Aerosol Particle Properties"
+    },
+    {
+     "Term": "Clouds",
+     "Topic": "Atmosphere",
+     "Category": "EARTH SCIENCE",
+     "VariableLevel1": "Cloud Microphysics",
+     "VariableLevel2": "Cloud Droplet Concentration/Size"
+    }
+   ],
+   "cmr_abstract": "The Cloud Microphysics dataset consists of particle size distributions from three instruments, the 2D-P (two dimensional precipitation probe), the 2D-C (two dimensional cloud probe) and the FSSP (Forward Scattering Spectrometer Probe). These three instruments yield precipitation, hydrometeor and aerosol sizes ranging from 0.3-6400 micrometers. Data is in the form of images and ascii tables.",
+   "cmr_data_formats": "null",
+   "date_queried": "2022-07-20T09:26:03.481160-07:00",
+   "campaigns": [
+    "fe4d404a-3b84-43af-a0f0-d864ec89bf7b"
+   ],
+   "instruments": [
+    "f21696de-7343-4241-85d2-e08293aa53d3",
+    "c21147c2-ecb6-4d8e-b23a-10ea136d6fd6"
+   ],
+   "platforms": [
+    "80155bc3-2cde-4978-932e-5c69fd13212d"
+   ],
+   "collection_periods": [
+    "2391ab84-d134-412f-8bf6-8521a1987559"
+   ]
+  },
+  {
+   "uuid": "sparse-0000",
+   "concept_id": null,
+   "doi": "",
+   "long_name": "",
+   "cmr_short_name": null,
+   "cmr_entry_title": "Sparse Test Product",
+   "cmr_projects": [],
+   "cmr_dates": [],
+   "cmr_plats_and_insts": [],
+   "cmr_science_keywords": "null",
+   "cmr_abstract": "",
+   "cmr_data_formats": "null",
+   "date_queried": null,
+   "campaigns": [],
+   "instruments": [],
+   "platforms": [],
+   "collection_periods": []
+  }
+ ]
+}

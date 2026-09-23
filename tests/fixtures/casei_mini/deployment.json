@@ -1,0 +1,172 @@
+{
+ "success": true,
+ "message": "",
+ "data": [
+  {
+   "uuid": "b6145d5b-8a02-45b3-a0e6-67ea5ad4243f",
+   "aliases": [],
+   "collection_periods": [
+    "6b665843-45f9-4404-8c75-0f82433b5f92",
+    "6d77ac56-0c23-420f-b18c-d74d2034da8b",
+    "b665f8ac-7639-41f9-a641-3500f33d2a22",
+    "37507f51-60a1-4277-ba35-cf0bc4dcb108",
+    "fb7cd24c-1be9-4c01-8af8-e90a84c93354",
+    "e998fb57-ff36-4163-89cc-cc10e6fa52c8",
+    "78a7ad1d-f32b-4dc7-98d2-c06cda8cc257",
+    "b64e972a-a3f1-4b91-9894-aa0768730ef6"
+   ],
+   "iops": [
+    "48ba68d6-a973-4f46-bae1-910a6a63abb7"
+   ],
+   "significant_events": [
+    "635d4ee2-9850-49ae-a211-3bf7286c9fc1",
+    "a9eb9ad3-7370-42e8-9386-8b78a887961d"
+   ],
+   "short_name": "FIREX-AQ_dep_2019",
+   "long_name": "FIREX-AQ-D1_2019",
+   "notes_public": "",
+   "start_date": "2019-07-15",
+   "end_date": "2019-09-05",
+   "spatial_bounds": "SRID=4326;POLYGON ((-135 15, -75 15, -75 60, -135 60, -135 15))",
+   "study_region_map": "",
+   "ground_sites_map": "",
+   "flight_tracks": "",
+   "campaign": "7c6737d4-10a8-46f7-af06-33eaa5248b35",
+   "geographical_regions": [
+    "e7cc17c1-b963-4efa-b2ab-e8100cad06c9",
+    "629fbde4-d2ea-4767-8378-c03bda7647cd"
+   ]
+  },
+  {
+   "uuid": "3e2834d9-9267-4585-902f-aefc8fd7e37c",
+   "aliases": [
+    "b962e370-59c3-4562-a9da-842fd2c4672f"
+   ],
+   "collection_periods": [
+    "1f57a169-7c7c-4b42-91a4-68c6b1fb69b0",
+    "8860aecb-1965-43e5-951c-5196c663f89d",
+    "bf955aed-cb36-4763-b7cf-2e089aad8a3f"
+   ],
+   "iops": [
+    "958056a8-81fd-417b-b7f4-4d8236ece79c"
+   ],
+   "significant_events": [
+    "0d4dd5a6-8a0f-4f9a-848a-4d7b9f23b919"
+   ],
+   "short_name": "CAMEX_dep_1993",
+   "long_name": "CAMEX-D1_1993",
+   "notes_public": "",
+   "start_date": "1993-09-07",
+   "end_date": "1993-10-08",
+   "spatial_bounds": "SRID=4326;POLYGON ((-83 25, -70 25, -70 45, -83 45, -83 25))",
+   "study_region_map": "",
+   "ground_sites_map": "",
+   "flight_tracks": "",
+   "campaign": "fe4d404a-3b84-43af-a0f0-d864ec89bf7b",
+   "geographical_regions": [
+    "98972937-92d5-4084-817d-7ef1c15f9a67",
+    "e76d3b1e-62ab-4ca0-ba26-d96626943349"
+   ]
+  },
+  {
+   "uuid": "eb32f743-eb80-4ef0-9749-7ca68b3abdb8",
+   "aliases": [
+    "14579ffe-19ba-4894-b958-4d64abffce57"
+   ],
+   "collection_periods": [
+    "1690d33a-21b6-474f-94fa-afe77bed4752",
+    "aa3281c2-3e2d-413c-a85d-98c27eb15a0e"
+   ],
+   "iops": [],
+   "significant_events": [],
+   "short_name": "CAMEX_dep_1995",
+   "long_name": "CAMEX-D2_1995",
+   "notes_public": "",
+   "start_date": "1995-08-23",
+   "end_date": "1995-09-02",
+   "spatial_bounds": "SRID=4326;POLYGON ((-83 25, -70 25, -70 43, -83 43, -83 25))",
+   "study_region_map": "",
+   "ground_sites_map": "",
+   "flight_tracks": "",
+   "campaign": "fe4d404a-3b84-43af-a0f0-d864ec89bf7b",
+   "geographical_regions": [
+    "98972937-92d5-4084-817d-7ef1c15f9a67",
+    "e76d3b1e-62ab-4ca0-ba26-d96626943349"
+   ]
+  },
+  {
+   "uuid": "9456259a-8a96-4b2b-b43e-d2f48e2cf6d4",
+   "aliases": [
+    "7ab1d3da-abc1-4875-984b-0ffaa8985f12"
+   ],
+   "collection_periods": [
+    "517f149b-b2a5-429e-8276-07b8dad4ff08",
+    "cbb3e206-9bc9-49c9-99c5-752486246776",
+    "215dfd22-655e-4f13-92c2-e75a5c980ce2",
+    "395c09ce-a9f9-4c1e-9735-9a89fe204b79",
+    "5e61bf21-2a33-4719-bf49-1d295dec7a09"
+   ],
+   "iops": [
+    "138e28cf-9e51-4bca-84aa-aa53d35204c3"
+   ],
+   "significant_events": [
+    "96299eee-268c-4feb-9ab2-7bfd3e088473",
+    "25dd8a44-c20d-4431-a99e-9eae247fa2f2",
+    "1aba2b40-a877-4914-b9e1-a41091667bfe",
+    "4d04e3ac-a020-495a-a14d-ceb090da8071"
+   ],
+   "short_name": "CAMEX_dep_1998",
+   "long_name": "CAMEX-D3_1998",
+   "notes_public": "",
+   "start_date": "1998-08-04",
+   "end_date": "1998-09-30",
+   "spatial_bounds": "SRID=4326;POLYGON ((-105 10, -50 10, -50 50, -105 50, -105 10))",
+   "study_region_map": "",
+   "ground_sites_map": "",
+   "flight_tracks": "",
+   "campaign": "fe4d404a-3b84-43af-a0f0-d864ec89bf7b",
+   "geographical_regions": [
+    "98972937-92d5-4084-817d-7ef1c15f9a67",
+    "e76d3b1e-62ab-4ca0-ba26-d96626943349"
+   ]
+  },
+  {
+   "uuid": "982ca7d7-df48-46f0-9bed-1f92b8e4eb96",
+   "aliases": [
+    "b1708e4e-28cf-4678-ac98-69c61f1ffd21"
+   ],
+   "collection_periods": [
+    "6da78e87-02d4-4eb8-9996-5d5bf7ba236b",
+    "5d72acbc-0f37-4481-94be-ce31e21d89be",
+    "886f4598-52c4-4816-9b93-1bcf54d27e70",
+    "bb47437e-12a5-46b0-8960-c1cbfb76ed1f",
+    "26d690ad-2971-4606-99ca-ac9a900f1382",
+    "15273f39-6927-46ab-9238-58978b152266",
+    "2391ab84-d134-412f-8bf6-8521a1987559"
+   ],
+   "iops": [
+    "99f1c9ac-35c0-4341-afd8-233d6a94e024"
+   ],
+   "significant_events": [
+    "95ebd336-c5f8-4a1c-89cc-dc9c41dda352",
+    "1ded5474-62a8-4c0a-9c1d-97f00645d989",
+    "94bf70d5-7438-40e0-a4ca-307753e5cb09",
+    "f72f7903-a273-4075-82fe-1857e16245ac"
+   ],
+   "short_name": "CAMEX_dep_2001",
+   "long_name": "CAMEX-D4_2001",
+   "notes_public": "",
+   "start_date": "2001-08-03",
+   "end_date": "2001-09-28",
+   "spatial_bounds": "SRID=4326;POLYGON ((-116 10, -48 10, -48 50, -116 50, -116 10))",
+   "study_region_map": "",
+   "ground_sites_map": "",
+   "flight_tracks": "",
+   "campaign": "fe4d404a-3b84-43af-a0f0-d864ec89bf7b",
+   "geographical_regions": [
+    "98972937-92d5-4084-817d-7ef1c15f9a67",
+    "e76d3b1e-62ab-4ca0-ba26-d96626943349"
+   ]
+  }
+ ]
+}
