@@ -4,10 +4,18 @@ Cache key: (stage, input_uuid, prompt_version) — bumping a prompt's version
 invalidates its cache. A cache hit makes no API call. Every response is
 validated against the stage's pydantic model; one retry with the validation
 error appended, then hard failure.
+
+Backends (CASEI_GEOFM_BACKEND env var):
+  api        — Anthropic SDK; needs ANTHROPIC_API_KEY.
+  claude_cli — headless `claude -p` (Claude Code CLI); uses the user's
+               existing Claude login, no API key or separate billing.
+  auto       — (default) api when ANTHROPIC_API_KEY is set, else claude_cli.
 """
 
 import json
 import os
+import shutil
+import subprocess
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -56,10 +64,48 @@ def _call_api(system: str, user: str, model: str) -> str:
     return msg.content[0].text
 
 
+CLAUDE_BIN = os.environ.get("CASEI_GEOFM_CLAUDE_BIN", "claude")
+
+
+def _call_claude_cli(system: str, user: str, model: str) -> str:
+    """Headless Claude Code CLI call (`claude -p`). Prompt goes via stdin to
+    avoid argv length limits; text generation only, no tools."""
+    cmd = [CLAUDE_BIN, "-p", "--output-format", "text", "--system-prompt", system]
+    if model:
+        cmd += ["--model", model]
+    result = subprocess.run(cmd, input=user, capture_output=True, text=True, timeout=600)
+    out = result.stdout.strip()
+    if result.returncode != 0 or not out or "Not logged in" in out:
+        raise RuntimeError(
+            f"claude CLI call failed (rc={result.returncode}): "
+            f"{(out or result.stderr.strip())[:300]}")
+    return out
+
+
+def pick_backend():
+    """Resolve the callable for the configured backend."""
+    choice = os.environ.get("CASEI_GEOFM_BACKEND", "auto")
+    if choice == "api":
+        return _call_api
+    if choice == "claude_cli":
+        return _call_claude_cli
+    if choice == "auto":
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            return _call_api
+        if shutil.which(CLAUDE_BIN):
+            return _call_claude_cli
+        raise RuntimeError(
+            "no LLM backend available: set ANTHROPIC_API_KEY (api) or install "
+            "and log in the Claude Code CLI (claude_cli)")
+    raise ValueError(f"unknown CASEI_GEOFM_BACKEND={choice!r}")
+
+
 def call_stage(stage: str, input_uuid: str, input_payload: dict,
                response_model: type[BaseModel], prompt_version: str = "v1",
                model: str = DEFAULT_MODEL, cache_dir: Path | None = None,
-               api=_call_api) -> BaseModel:
+               api=None) -> BaseModel:
+    if api is None:
+        api = pick_backend()
     cache_dir = Path(cache_dir or CACHE_DIR) / stage
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = cache_dir / f"{input_uuid}-{prompt_version}.json"

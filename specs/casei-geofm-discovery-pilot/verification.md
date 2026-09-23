@@ -45,11 +45,13 @@ granule query, CMR collection DOI lookup).
 
 ## ⏸ Not yet met — blocked or pending
 
-- **Task 14 (LLM slice + full-catalog run):** BLOCKED — no `ANTHROPIC_API_KEY` in
-  this environment. Estimated full-run volume: ~2,607 Stage-1 calls, then
-  (yield-dependent) roughly 10,000–20,000 total calls across stages 2/3/5/7;
-  order-of-magnitude ~40–60M input tokens. Run `discover --limit 25` first to tune
-  prompts. All calls cache; reruns are free.
+- **Task 14 (LLM slice + full-catalog run):** BLOCKED on either an
+  `ANTHROPIC_API_KEY` or a one-time `claude` CLI login (the `claude_cli` backend
+  is installed and unit-tested; run `claude` then `/login` to activate it).
+  Estimated full-run volume: ~2,607 Stage-1 calls, then (yield-dependent) roughly
+  10,000–20,000 total calls across stages 2/3/5/7; order-of-magnitude ~40–60M
+  input tokens. Run `discover --limit 25` first to tune prompts. All calls cache;
+  reruns are free.
 - **Level 2/3 promotion at scale** — machinery tested; real promotion runs follow
   the full discovery run (Level 2 for HIGH+MEDIUM, Level 3 for a HIGH sample).
 - **Pilot metrics with real numbers, human-review outcomes** — follow Task 14 and
