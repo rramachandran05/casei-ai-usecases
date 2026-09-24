@@ -45,13 +45,19 @@ granule query, CMR collection DOI lookup).
 
 ## ⏸ Not yet met — blocked or pending
 
-- **Task 14 (LLM slice + full-catalog run):** BLOCKED on either an
-  `ANTHROPIC_API_KEY` or a one-time `claude` CLI login (the `claude_cli` backend
-  is installed and unit-tested; run `claude` then `/login` to activate it).
-  Estimated full-run volume: ~2,607 Stage-1 calls, then (yield-dependent) roughly
-  10,000–20,000 total calls across stages 2/3/5/7; order-of-magnitude ~40–60M
-  input tokens. Run `discover --limit 25` first to tune prompts. All calls cache;
-  reruns are free.
+- **Task 14 — tuning slices DONE (2026-09-24), full run pending a strategy
+  decision.** Two 25-product slices ran end-to-end on the `claude_cli` backend
+  (slice 1 first-25/atmosphere-heavy, slice 2 stratified across focus areas):
+  1,003 candidates over 49 products / 17 campaigns. Tuning fixes landed from
+  slice evidence: traceable-value guardrail, resilient JSON/quarantine, narrowed
+  Level-1 lint, task-mapper v2 (fan-out 7.1 -> ~4.2 tasks/opp, base phenomenon
+  vocabulary), science-fit dedup per (product, target, phenomenon), stratified
+  accumulating slices. Slice-2 surfaced the spec's archetype (PROVE lidar canopy
+  height -> pixel regression: DIRECT_LABEL, 39 coincident Landsat scenes, 0-day
+  offset, TRANSFORMABLE, label_value HIGH). Full-catalog extrapolation: ~68k
+  LLM calls as-is (~9.3k stage-2, ~39k candidates to rank) — needs either an
+  API key with parallelism, per-opportunity ranking batching, or slice-wise
+  CLI runs; decision owner: Rahul.
 - **Level 2/3 promotion at scale** — machinery tested; real promotion runs follow
   the full discovery run (Level 2 for HIGH+MEDIUM, Level 3 for a HIGH sample).
 - **Pilot metrics with real numbers, human-review outcomes** — follow Task 14 and
