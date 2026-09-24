@@ -52,6 +52,27 @@ def test_level1_lint_accepts_hedged_phrasing():
     lint_level1_phrasing(c)
 
 
+def test_level1_lint_allows_deterministic_facts_called_confirmed():
+    """Stage-4 satellite overlap IS confirmed deterministically — saying so is
+    not a dataset-confirmation claim (regression: the broad lint quarantined
+    399/632 slice candidates on phrases like this)."""
+    c = Candidate(evidence=Evidence(evidence_level=1))
+    c.ranking.prithvi_readiness_reasoning = (
+        "coincident HLS scenes are confirmed with sub-day offsets; "
+        "spatial fit verified against the 30 m grid")
+    lint_level1_phrasing(c)  # no raise
+
+
+def test_level1_lint_still_blocks_dataset_confirmation_claims():
+    c = Candidate(evidence=Evidence(evidence_level=1))
+    for phrase in ["the labels are confirmed", "verified ground-truth",
+                   "validated supervision", "is a training dataset"]:
+        c.ranking.label_value_reasoning = phrase
+        import pytest as _pytest
+        with _pytest.raises(Level1PhrasingError):
+            lint_level1_phrasing(c)
+
+
 def test_level2_may_use_confirmed_phrasing():
     c = Candidate(evidence=Evidence(evidence_level=2))
     c.ranking.label_value_reasoning = "variables confirmed against CMR metadata"

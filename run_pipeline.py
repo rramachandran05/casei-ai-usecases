@@ -100,8 +100,10 @@ def cmd_export(args) -> None:
 def cmd_report(args) -> None:
     from casei_geofm.report import pilot_metrics, review_packet
     candidates = load_candidates(STAGE7_CANDIDATES)
-    n_products = len(load_normalized())
-    pilot_metrics(candidates, n_products)
+    # "examined" = products that actually went through Stage 1, not the whole cache
+    stage1 = Path("data/cache/stage1/results.json")
+    n_examined = len(json.loads(stage1.read_text())) if stage1.exists() else 0
+    pilot_metrics(candidates, n_examined)
     review_packet(candidates)
 
 

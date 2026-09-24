@@ -14,10 +14,17 @@ from casei_geofm.schemas.candidate import Candidate
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 STAGE7_DIR = Path("data/cache/stage7")
 
-# Confirmatory phrasing forbidden on Level-1 (metadata-inference) candidates.
+# Confirmatory phrasing forbidden on Level-1 (metadata-inference) candidates:
+# claiming the DATASET/LABELS themselves are confirmed. Narrow on purpose —
+# "confirmed satellite overlap" is a legitimate deterministic Stage-4 fact
+# (the broad version quarantined 399/632 slice candidates on such phrases).
 LEVEL1_FORBIDDEN = re.compile(
-    r"\b(confirmed|verified|proven|validated|is a training dataset|"
-    r"ready[- ]to[- ]use training)\b", re.IGNORECASE)
+    r"\b(?:confirmed|verified|validated|proven)\s+(?:training\s+)?"
+    r"(?:dataset|data\s?set|labels?|supervision|ground[- ]truth)\b"
+    r"|\bis\s+a\s+(?:confirmed|verified|ready[- ]to[- ]use)?\s*training\s+dataset\b"
+    r"|\b(?:dataset|labels?|supervision)\s+(?:is|are|has been|have been)\s+"
+    r"(?:confirmed|verified|validated|proven)\b",
+    re.IGNORECASE)
 
 
 class Level1PhrasingError(ValueError):
