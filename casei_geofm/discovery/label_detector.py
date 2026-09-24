@@ -86,15 +86,23 @@ def detect(record: dict, api=None, cache_dir: Path | None = None) -> dict:
 
 def run(records: list[dict], limit: int | None = None, api=None,
         checkpoint_every: int = 25, out_dir: Path | str = STAGE1_DIR) -> list[dict]:
+    """Successive runs EXTEND the stage file: existing results are kept and
+    reprocessed products are updated in place, so --limit slices accumulate."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    results, done = [], 0
+    results_file = out_dir / "results.json"
+    by_id: dict[str, dict] = {}
+    if results_file.exists():
+        by_id = {r["product_id"]: r for r in json.loads(results_file.read_text())}
+
     subset = records[:limit] if limit else records
-    for record in subset:
-        results.append(detect(record, api=api))
-        done += 1
+    for done, record in enumerate(subset, 1):
+        result = detect(record, api=api)
+        by_id[result["product_id"]] = result
         if done % checkpoint_every == 0 or done == len(subset):
-            (out_dir / "results.json").write_text(json.dumps(results))
-            print(f"  stage1: {done}/{len(subset)} products "
-                  f"({sum(1 for r in results if r['opportunities'])} with opportunities)")
-    return results
+            merged = list(by_id.values())
+            results_file.write_text(json.dumps(merged))
+            print(f"  stage1: {done}/{len(subset)} products this run, "
+                  f"{len(merged)} total "
+                  f"({sum(1 for r in merged if r['opportunities'])} with opportunities)")
+    return list(by_id.values())

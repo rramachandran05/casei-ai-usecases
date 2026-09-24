@@ -41,13 +41,33 @@ def cmd_harvest(args) -> None:
     normalize_run()
 
 
+def stratified_slice(records: list[dict], limit: int) -> list[dict]:
+    """Round-robin across focus areas, skipping already-processed products,
+    so successive --limit runs extend coverage across the catalog's breadth."""
+    stage1 = Path("data/cache/stage1/results.json")
+    done = ({r["product_id"] for r in json.loads(stage1.read_text())}
+            if stage1.exists() else set())
+    fresh = [r for r in records if r["product_id"] not in done]
+    buckets: dict[str, list[dict]] = {}
+    for r in fresh:
+        key = r["focus_areas"][0] if r["focus_areas"] else "none"
+        buckets.setdefault(key, []).append(r)
+    picked: list[dict] = []
+    while len(picked) < limit and any(buckets.values()):
+        for key in sorted(buckets):
+            if buckets[key] and len(picked) < limit:
+                picked.append(buckets[key].pop(0))
+    return picked
+
+
 def cmd_discover(args) -> None:
     from casei_geofm.discovery import label_detector, task_mapper
     records = load_normalized()
-    results = label_detector.run(records, limit=args.limit)
+    subset = stratified_slice(records, args.limit) if args.limit else records
+    results = label_detector.run(subset)
     records_by_id = {r["product_id"]: r for r in records}
     candidates = task_mapper.run(records_by_id, results)
-    print(f"discover: {len(results)} products -> {len(candidates)} candidates")
+    print(f"discover: {len(results)} products total -> {len(candidates)} candidates")
 
 
 def cmd_coincide(args) -> None:

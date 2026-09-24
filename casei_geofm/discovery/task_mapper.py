@@ -15,16 +15,23 @@ CONFIG_DIR = Path(__file__).parent.parent / "config"
 STAGE2_DIR = Path("data/cache/stage2")
 
 UNKNOWN = "UNKNOWN"
+PROMPT_VERSION = "v2"  # v2: <=4 defensible tasks, base phenomenon vocabulary
 
 
 def _task_vocabulary() -> list[str]:
     return yaml.safe_load((CONFIG_DIR / "task_taxonomy.yaml").read_text())["task_families"]
 
 
+def _preferred_phenomena() -> list[str]:
+    windows = yaml.safe_load((CONFIG_DIR / "phenomena_windows.yaml").read_text())["windows_days"]
+    return sorted(k for k in windows if k != "default")
+
+
 def map_tasks(record: dict, opportunity: dict, api=None,
               cache_dir: Path | None = None) -> list[Candidate]:
     payload = {
         "task_vocabulary": _task_vocabulary(),
+        "preferred_phenomenon_terms": _preferred_phenomena(),
         "opportunity": opportunity,
         "product": {
             "product_name": record["product_name"],
@@ -38,7 +45,8 @@ def map_tasks(record: dict, opportunity: dict, api=None,
     kwargs = {"cache_dir": cache_dir} if cache_dir else {}
     if api:
         kwargs["api"] = api
-    resp: TaskMapperResponse = call_stage("task_mapper", uid, payload, TaskMapperResponse, **kwargs)
+    resp: TaskMapperResponse = call_stage("task_mapper", uid, payload, TaskMapperResponse,
+                                          prompt_version=PROMPT_VERSION, **kwargs)
 
     candidates = []
     for task in resp.tasks:
@@ -81,16 +89,23 @@ def map_tasks(record: dict, opportunity: dict, api=None,
 def run(records_by_id: dict[str, dict], stage1_results: list[dict],
         api=None, checkpoint_every: int = 25,
         out_dir: Path | str = STAGE2_DIR) -> list[Candidate]:
+    """Successive runs EXTEND the stage file, keyed by candidate_id."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    candidates: list[Candidate] = []
+    cand_file = out_dir / "candidates.json"
+    by_id: dict[str, Candidate] = {}
+    if cand_file.exists():
+        for c in json.loads(cand_file.read_text()):
+            cand = Candidate(**c)
+            by_id[cand.candidate_id] = cand
+
     with_opps = [r for r in stage1_results if r["opportunities"]]
     for n, result in enumerate(with_opps, 1):
         record = records_by_id[result["product_id"]]
         for opp in result["opportunities"]:
-            candidates.extend(map_tasks(record, opp, api=api))
+            for cand in map_tasks(record, opp, api=api):
+                by_id[cand.candidate_id] = cand
         if n % checkpoint_every == 0 or n == len(with_opps):
-            (out_dir / "candidates.json").write_text(
-                json.dumps([c.model_dump() for c in candidates]))
-            print(f"  stage2: {n}/{len(with_opps)} products -> {len(candidates)} candidates")
-    return candidates
+            cand_file.write_text(json.dumps([c.model_dump() for c in by_id.values()]))
+            print(f"  stage2: {n}/{len(with_opps)} products -> {len(by_id)} candidates total")
+    return list(by_id.values())
