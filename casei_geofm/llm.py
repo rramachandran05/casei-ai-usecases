@@ -43,12 +43,20 @@ def load_prompt(stage: str, version: str) -> str:
 
 
 def _extract_json(text: str) -> dict:
-    """Tolerate code fences around the JSON object."""
+    """Tolerate code fences and prose around the JSON object."""
     text = text.strip()
     if text.startswith("```"):
         text = text.split("```")[1]
         text = text.removeprefix("json").strip()
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # fall back to decoding from the first '{' (prose before/after JSON)
+        start = text.find("{")
+        if start == -1:
+            raise
+        obj, _ = json.JSONDecoder().raw_decode(text[start:])
+        return obj
 
 
 def _call_api(system: str, user: str, model: str) -> str:
@@ -125,5 +133,7 @@ def call_stage(stage: str, input_uuid: str, input_payload: dict,
         except (ValidationError, json.JSONDecodeError) as e:
             last_error = e
             user = (json.dumps(input_payload, default=str)
-                    + f"\n\nYour previous response failed validation:\n{e}\nReturn corrected JSON only.")
+                    + f"\n\nYour previous response failed validation:\n{e}\n"
+                    "Return corrected, strictly valid JSON only — escape any "
+                    "double quotes inside string values.")
     raise RuntimeError(f"LLM stage '{stage}' failed validation twice for {input_uuid}") from last_error

@@ -93,12 +93,17 @@ def run(candidates: list[Candidate], api=None, checkpoint_every: int = 50,
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     card = ModelCard.load()
+    failed = 0
     for n, c in enumerate(candidates, 1):
         assess_axes(c, card)
         c.compatibility.native_or_transformable = classify(c)
         c.compatibility.overall_compatibility = overall_rating(c)
         if c.compatibility.native_or_transformable == Compat.TRANSFORMABLE:
-            propose_transformation(c, api=api)
+            try:
+                propose_transformation(c, api=api)
+            except RuntimeError as e:
+                failed += 1
+                c.evidence.uncertainties += f" [transform proposal failed: {e}]"
         if n % checkpoint_every == 0 or n == len(candidates):
             (out_dir / "candidates.json").write_text(
                 json.dumps([x.model_dump() for x in candidates]))

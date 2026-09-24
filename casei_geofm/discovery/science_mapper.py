@@ -55,10 +55,17 @@ def run(candidates: list[Candidate], api=None, checkpoint_every: int = 50,
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     card = ModelCard.load()
+    failed = 0
     for n, c in enumerate(candidates, 1):
-        assess(c, card, api=api)
+        try:
+            assess(c, card, api=api)
+        except RuntimeError as e:
+            # quarantine, don't lose the run: science_fit stays UNKNOWN
+            failed += 1
+            c.evidence.uncertainties += f" [science_fit failed: {e}]"
         if n % checkpoint_every == 0 or n == len(candidates):
             (out_dir / "candidates.json").write_text(
                 json.dumps([x.model_dump() for x in candidates]))
-            print(f"  stage3: {n}/{len(candidates)} assessed")
+            print(f"  stage3: {n}/{len(candidates)} assessed"
+                  + (f" ({failed} quarantined)" if failed else ""))
     return candidates

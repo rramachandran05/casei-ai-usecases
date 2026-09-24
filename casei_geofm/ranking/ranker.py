@@ -60,6 +60,14 @@ def rank(candidate: Candidate, api=None, cache_dir: Path | None = None) -> Candi
         kwargs["api"] = api
     resp: RankingResponse = call_stage(
         "ranker", candidate.candidate_id, payload, RankingResponse, **kwargs)
+    # lint BEFORE assignment so confirmatory phrasing never persists
+    if candidate.evidence.evidence_level <= 1:
+        for text in (resp.label_value_reasoning, resp.prithvi_readiness_reasoning):
+            m = LEVEL1_FORBIDDEN.search(text or "")
+            if m:
+                raise Level1PhrasingError(
+                    f"Level-1 candidate {candidate.candidate_id} uses confirmatory "
+                    f"phrasing: {m.group(0)!r}")
     r = candidate.ranking
     r.label_value = resp.label_value
     r.label_value_reasoning = resp.label_value_reasoning
@@ -75,8 +83,13 @@ def run(candidates: list[Candidate], api=None, checkpoint_every: int = 50,
         out_dir: Path | str = STAGE7_DIR) -> list[Candidate]:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    failed = 0
     for n, c in enumerate(candidates, 1):
-        rank(c, api=api)
+        try:
+            rank(c, api=api)
+        except (RuntimeError, Level1PhrasingError) as e:
+            failed += 1
+            c.evidence.uncertainties += f" [ranking failed: {e}]"
         if n % checkpoint_every == 0 or n == len(candidates):
             (out_dir / "candidates.json").write_text(
                 json.dumps([x.model_dump() for x in candidates]))
